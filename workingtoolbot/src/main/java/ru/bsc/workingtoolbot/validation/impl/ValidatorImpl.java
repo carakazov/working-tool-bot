@@ -24,7 +24,7 @@ public class ValidatorImpl implements Validator {
             if(!"M".equals(stringRecord.required()) && !"O".equals(stringRecord.required())) {
                 errors.add("Признак обязательности должен быть либо 'M' либо 'O' - " + line);
             }
-            if(StringUtils.isNotBlank(stringRecord.regex()) || !stringRecord.regex().startsWith("\\")) {
+            if(StringUtils.isNotEmpty(stringRecord.regex()) && !stringRecord.regex().startsWith("\\")) {
                 errors.add("Регулярное выражение должно начинаться с \\ - " + line);
             }
             if(isDataTypeIncorrect(stringRecord.dataType(), userDtos)) {
@@ -32,9 +32,11 @@ public class ValidatorImpl implements Validator {
             }
         }
 
-        StringBuilder builder = new StringBuilder();
-        errors.forEach(item -> builder.append(item).append("\n"));
-        throw new ValidationException(builder.toString());
+        if(!errors.isEmpty()) {
+            StringBuilder builder = new StringBuilder();
+            errors.forEach(item -> builder.append(item).append("\n"));
+            throw new ValidationException(builder.toString());
+        }
     }
 
     private boolean isDataTypeIncorrect(String dataType, List<String> userDtos) {
@@ -46,6 +48,6 @@ public class ValidatorImpl implements Validator {
     }
 
     private String createLine(JsonStringRecord record) {
-        return record.title() + record.required() + record.dataType() + record.regex();
+        return record.title() + " " + record.required() + " " + record.dataType() + " " + record.regex();
     }
 }

@@ -13,7 +13,7 @@ public class Controller {
     private final JsonParser jsonParser;
     @GetMapping("/test")
     public JsonNode get() {
-        String test = "testField M int(4)\n" +
+        String test = "testField M boolean\n" +
             "testFiel1 M decimal(2,3)";
         JsonNode node = jsonParser.parse(test);
         return node;
