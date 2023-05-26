@@ -127,12 +127,13 @@ public class Bot extends TelegramLongPollingBot {
             case TMP_WAIT_LIST: {
                 BigInteger tmpId = chatConfigService.getTmpInUse(chatId);
                 testDataTemplateService.setPattern(message, tmpId);
-                JsonNode jsonNode = objectMapper.createObjectNode();
+                JsonNode jsonNode = parser.parse(message);
                 File file = new File(String.format("%s.json", testDataTemplateService.getTemplate(tmpId).get().getName()));
                 try {
                     objectMapper.writeValue(file, jsonNode);
                     SendDocument sendDocument = new SendDocument(chatId.toString(), new InputFile(file));
                     execute(sendDocument);
+                    chatConfigService.setBotState(chatId, BotState.DEFAULT);
                 } catch(IOException e) {
                     throw new RuntimeException(e);
                 }

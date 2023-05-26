@@ -14,7 +14,6 @@ import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 @Slf4j
 public class BotInit {
     private final Bot bot;
-    /*
     @EventListener({ApplicationReadyEvent.class})
     public void init() throws TelegramApiException {
         TelegramBotsApi telegramBotsApi = new TelegramBotsApi(DefaultBotSession.class);
@@ -24,6 +23,4 @@ public class BotInit {
             log.error("Exception:", e);
         }
     }
-
-     */
 }
