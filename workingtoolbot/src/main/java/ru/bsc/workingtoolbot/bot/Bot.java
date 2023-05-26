@@ -1,7 +1,6 @@
 package ru.bsc.workingtoolbot.bot;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.math.BigInteger;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -12,13 +11,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+import org.telegram.telegrambots.meta.api.methods.GetFile;
 import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.Document;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboard;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import ru.bsc.workingtoolbot.main.Parser;
+import ru.bsc.workingtoolbot.main.impl.JavaParser;
 import ru.bsc.workingtoolbot.model.BotState;
 import ru.bsc.workingtoolbot.model.TmpResultType;
 import ru.bsc.workingtoolbot.service.ChatConfigService;
@@ -28,6 +30,7 @@ import ru.bsc.workingtoolbot.utils.exception.ValidationException;
 
 @Component
 public class Bot extends TelegramLongPollingBot {
+    private final JavaParser javaParser;
     private final ChatConfigService chatConfigService;
     private final TestDataTemplateService testDataTemplateService;
     private final MessageGenerator messageGenerator;
@@ -41,12 +44,13 @@ public class Bot extends TelegramLongPollingBot {
 
     @Autowired
     public Bot(
-        @Value("${application.bot.token}") String botToken, ChatConfigService chatConfigService,
+        @Value("${application.bot.token}") String botToken, JavaParser javaParser, ChatConfigService chatConfigService,
         TestDataTemplateService testDataTemplateService, MessageGenerator messageGenerator,
         Parser parser,
         KeyboardFactory keyboardFactory
     ) {
         super(botToken);
+        this.javaParser = javaParser;
         this.chatConfigService = chatConfigService;
         this.testDataTemplateService = testDataTemplateService;
         this.messageGenerator = messageGenerator;
@@ -68,10 +72,25 @@ public class Bot extends TelegramLongPollingBot {
     public void onUpdateReceived(Update update) {
         String messageText;
         Long chatId;
+        File file = null;
 
         if(update.hasMessage()) {
             chatId = update.getMessage().getChatId();
             messageText = update.getMessage().getText();
+            if(messageText == null) {
+                messageText = "";
+            }
+            Document document = update.getMessage().getDocument();
+            if(document != null) {
+                GetFile getFile = new GetFile(document.getFileId());
+                String filePath;
+                try {
+                    filePath = execute(getFile).getFilePath();
+                    file = downloadFile(filePath);
+                } catch(TelegramApiException e) {
+                    throw new RuntimeException(e);
+                }
+            }
         } else if(update.hasCallbackQuery()) {
             chatId = update.getCallbackQuery().getMessage().getChatId();
             if(update.getCallbackQuery().getData().equals(CallbackType.TMP_MESSAGE)) {
@@ -102,7 +121,7 @@ public class Bot extends TelegramLongPollingBot {
             }
         } else {
             try {
-                handleBotState(messageText, chatId);
+                handleBotState(messageText, chatId, file);
             } catch(TelegramApiException e) {
                 throw new RuntimeException(e);
             }
@@ -120,7 +139,7 @@ public class Bot extends TelegramLongPollingBot {
         execute(sendMessage);
     }
 
-    private void handleBotState(String message, Long chatId) throws TelegramApiException {
+    private void handleBotState(String message, Long chatId, File file) throws TelegramApiException {
         BotState state = chatConfigService.getBotState(chatId);
         if(message.equals(MainCommand.CANCEL)) {
             if(state == BotState.DEFAULT) {
@@ -138,6 +157,23 @@ public class Bot extends TelegramLongPollingBot {
                     sendMessage(chatId, messageGenerator.generateHelpMessage());
                 } else if(message.equals(MainCommand.TEST_DATA_CREATE)) {
                     sendMessage(chatId, "В каком виде хотите получить результат?", keyboardFactory.getChooseTesDataTypeKeyboard());
+                } else if(message.equals(MainCommand.TEST_CLASSES_GENERATE)) {
+                    sendMessage(chatId, "Загрузите классы моделей и dto");
+                    chatConfigService.setBotState(chatId, BotState.TC_WAIT_UPLOAD);
+                }
+                break;
+            }
+
+            case TC_WAIT_UPLOAD: {
+                if(file != null) {
+                    chatConfigService.addFileContent(chatId, javaParser.getContent(file));
+                    if (chatConfigService.getHelpQuestion(chatId) == null || Boolean.FALSE.equals(chatConfigService.getHelpQuestion(chatId))) {
+                        chatConfigService.setHelpQuestion(chatId, Boolean.TRUE);
+                    } else {
+                        sendMessage(chatId, "Все верно?"); //todo
+                    }
+                } else {
+                    chatConfigService.setBotState(chatId, BotState.DEFAULT);
                 }
                 break;
             }
@@ -157,7 +193,7 @@ public class Bot extends TelegramLongPollingBot {
                         sendMessage(chatId, jsonNode.toPrettyString());
                     } else {
                         testDataTemplateService.setPattern(message, tmpId);
-                        File file = new File(String.format("%s.json", testDataTemplateService.getTemplate(tmpId).get().getName()));
+                        File fileTmp = new File(String.format("%s.json", testDataTemplateService.getTemplate(tmpId).get().getName()));
                         objectMapper.writeValue(file, jsonNode);
                         SendDocument sendDocument = new SendDocument(chatId.toString(), new InputFile(file));
                         execute(sendDocument);

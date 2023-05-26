@@ -1,6 +1,9 @@
 package ru.bsc.workingtoolbot.service;
 
 import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -25,7 +28,34 @@ public class ChatConfigService {
     public void setBotState(Long chatId, BotState botState) {
         ChatConfig chatConfig = chatConfigRepository.findById(chatId).get();
         chatConfig.setState(botState);
+        if(botState == BotState.DEFAULT) {
+            chatConfig.setFilesInUse(Collections.emptyList());
+            chatConfig.setHelpMark(null);
+            chatConfig.setTmpInUseId(null);
+            chatConfig.setTmpInUseResultType(null);
+        }
         chatConfigRepository.save(chatConfig);
+    }
+
+    public void addFileContent(Long chatId, String content) {
+        ChatConfig chatConfig = chatConfigRepository.findById(chatId).get();
+        List<String> contentList = chatConfig.getFilesInUse();
+        if(contentList == null) {
+            contentList = new ArrayList<>();
+        }
+        contentList.add(content);
+        chatConfig.setFilesInUse(contentList);
+        chatConfigRepository.save(chatConfig);
+    }
+
+    public void setHelpQuestion(Long chatId, Boolean helpMark) {
+        ChatConfig chatConfig = chatConfigRepository.findById(chatId).get();
+        chatConfig.setHelpMark(helpMark);
+        chatConfigRepository.save(chatConfig);
+    }
+
+    public Boolean getHelpQuestion(Long chatId) {
+        return chatConfigRepository.findById(chatId).get().getHelpMark();
     }
 
     public void setTmpInUse(Long chatId, BigInteger tmpId) {
