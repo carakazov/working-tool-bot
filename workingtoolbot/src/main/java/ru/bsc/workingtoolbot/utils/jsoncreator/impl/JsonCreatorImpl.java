@@ -18,7 +18,7 @@ import ru.bsc.workingtoolbot.utils.jsoncreator.JsonCreator;
 @Component
 @RequiredArgsConstructor
 public class JsonCreatorImpl implements JsonCreator {
-    private static final String STRING_TEMPLATE = "\"{FIELD}\":\"{VALUE}\"";
+    private static final String STRING_TEMPLATE = "\"{FIELD}\":{VALUE}";
     private static final String FIELD_PLACEHOLDER = "{FIELD}";
     private static final String VALUE_PLACEHOLDER = "{VALUE}";
 
@@ -28,7 +28,8 @@ public class JsonCreatorImpl implements JsonCreator {
     public JsonNode create(JsonCreationDto request)  {
         StringBuilder builder = new StringBuilder("{");
         for(int i = 0; i < request.strings().size(); i++) {
-            builder.append(createString(request.strings().get(i)));
+            String value = createString(request.strings().get(i));
+            builder.append(value);
             if(i != request.strings().size() - 1) {
                 builder.append(",");
             }
@@ -52,6 +53,9 @@ public class JsonCreatorImpl implements JsonCreator {
             .get();
         //TODO проверка, если по данному типу не найдено, то идем в бд и достаем оттуда существуюший json
         String value = generator.generate(bounds, stringRecord.regex());
+        if(stringRecord.dataType().contains("string")) {
+            value = "\"" + value + "\"";
+        }
         return STRING_TEMPLATE
             .replace(FIELD_PLACEHOLDER, stringRecord.title())
             .replace(VALUE_PLACEHOLDER, value);
