@@ -1,6 +1,8 @@
 package ru.bsc.workingtoolbot.configuration;
 
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -18,17 +20,12 @@ public class ApplicationConfig {
     private static final String BOOLEAN_DATA_TYPE_MARKER = "boolean";
 
     @Bean
-    public Map<String, ValueGenerator> valueGenerators(
+    public Set<ValueGenerator> generators(
         StringValueGenerator stringValueGenerator,
         IntegerValueGenerator integerValueGenerator,
         DecimalValueGenerator decimalValueGenerator,
         BooleanValueGenerator booleanValueGenerator
     ) {
-        return Map.of(
-            STRING_DATA_TYPE_MARKER, stringValueGenerator,
-            INTEGER_DATA_TYPE_MARKER, integerValueGenerator,
-            DECIMAL_DATA_TYPE_MARKER, decimalValueGenerator,
-            BOOLEAN_DATA_TYPE_MARKER, booleanValueGenerator
-        );
+        return Set.of(stringValueGenerator, integerValueGenerator, decimalValueGenerator, booleanValueGenerator);
     }
 }

@@ -41,4 +41,9 @@ public class DecimalValueGenerator extends ValueGenerator {
             .replace(INTEGER_PLACEHOLDER, integer)
             .replace(DECIMAL_PLACEHOLDER, decimal);
     }
+
+    @Override
+    public String getType() {
+        return "decimal";
+    }
 }

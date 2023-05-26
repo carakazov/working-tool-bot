@@ -22,6 +22,11 @@ public class BooleanValueGenerator extends ValueGenerator {
         return generateInternal();
     }
 
+    @Override
+    public String getType() {
+        return "boolean";
+    }
+
     public String generateInternal() {
         int number = new Random().nextInt(0, 2);
         if(number == 0) {

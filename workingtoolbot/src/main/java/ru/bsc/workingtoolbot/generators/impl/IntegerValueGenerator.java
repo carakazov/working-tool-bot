@@ -23,4 +23,9 @@ public class IntegerValueGenerator extends ValueGenerator {
     protected String generateWithoutBounds() {
         return RandomStringUtils.random(3, false, true);
     }
+
+    @Override
+    public String getType() {
+        return "int";
+    }
 }
