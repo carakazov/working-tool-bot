@@ -143,10 +143,16 @@ public class Bot extends TelegramLongPollingBot {
             }
 
             case TMP_WAIT_NAME: {
-                chatConfigService.setTmpInUse(chatId, testDataTemplateService.setName(message, chatId));
-                sendMessage(chatId, "Введите список полей");
-                chatConfigService.setBotState(chatId, BotState.TMP_WAIT_LIST);
-                break;
+
+                try {
+                    chatConfigService.setTmpInUse(chatId, testDataTemplateService.setName(message, chatId));
+                    sendMessage(chatId, "Введите список полей");
+                    chatConfigService.setBotState(chatId, BotState.TMP_WAIT_LIST);
+                    break;
+                } catch(ValidationException exception) {
+                    sendMessage(chatId, exception.getMessage());
+                    break;
+                }
             }
 
             case TMP_WAIT_LIST: {

@@ -3,16 +3,15 @@ package ru.bsc.workingtoolbot.validation.impl;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.sun.jdi.connect.VMStartException;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
 import ru.bsc.workingtoolbot.dto.JsonCreationDto;
 import ru.bsc.workingtoolbot.dto.JsonStringRecord;
 import ru.bsc.workingtoolbot.utils.exception.ValidationException;
-import ru.bsc.workingtoolbot.validation.Validator;
+import ru.bsc.workingtoolbot.validation.JsonCreationValidator;
 
 @Component
-public class ValidatorImpl implements Validator {
+public class JsonCreationValidatorImpl implements JsonCreationValidator {
     @Override
     public void validate(JsonCreationDto creationDto, List<String> userDtos) {
         List<String> errors = new ArrayList<>();

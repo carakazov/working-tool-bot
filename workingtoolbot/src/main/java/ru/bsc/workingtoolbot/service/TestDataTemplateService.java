@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import ru.bsc.workingtoolbot.model.TestDataTemplate;
 import ru.bsc.workingtoolbot.repository.TestDataTemplateRepository;
 import ru.bsc.workingtoolbot.utils.exception.LogicException;
+import ru.bsc.workingtoolbot.utils.exception.ValidationException;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +27,10 @@ public class TestDataTemplateService {
 
     public List<TestDataTemplate> findAllByChatId(Long chatId) {
         return repository.findAllByChatId(chatId);
+    }
+
+    public Boolean existsByChatIdAndName(Long chatId, String name) {
+        return repository.existsByChatIdAndName(chatId, name);
     }
 
     public void addContent(BigInteger id, String tmpTemplate, String tmpContent) {
@@ -49,6 +54,9 @@ public class TestDataTemplateService {
     }
 
     public BigInteger setName(String name, Long chatId) {
+        if(existsByChatIdAndName(chatId, name)) {
+            throw new ValidationException("У вас уже есть шаблон с таким именем. Придумайте другое.");
+        }
         return setName(name, null, chatId);
     }
 
