@@ -19,6 +19,13 @@ public abstract class ValueGenerator {
         }
     }
 
+    protected String changeFirstZero(String string) {
+        if(string.startsWith("0")) {
+            return StringUtils.replaceOnce(string, "0", "1");
+        }
+        return string;
+    }
+
     protected abstract String generateWhenBounds(String bounds);
 
     protected abstract String generateWithoutBounds();
