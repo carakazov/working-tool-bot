@@ -3,10 +3,10 @@ package ru.bsc.workingtoolbot.service;
 import java.math.BigInteger;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import ru.bsc.workingtoolbot.model.BotState;
 import ru.bsc.workingtoolbot.model.ChatConfig;
+import ru.bsc.workingtoolbot.model.TmpResultType;
 import ru.bsc.workingtoolbot.repository.ChatConfigRepository;
 
 @Service
@@ -30,7 +30,13 @@ public class ChatConfigService {
 
     public void setTmpInUse(Long chatId, BigInteger tmpId) {
         ChatConfig chatConfig = chatConfigRepository.findById(chatId).get();
-        chatConfig.setTmpInUse(tmpId);
+        chatConfig.setTmpInUseId(tmpId);
+        chatConfigRepository.save(chatConfig);
+    }
+
+    public void setTmpInUseResultType(Long chatId, TmpResultType resultType) {
+        ChatConfig chatConfig = chatConfigRepository.findById(chatId).get();
+        chatConfig.setTmpInUseResultType(resultType);
         chatConfigRepository.save(chatConfig);
     }
 
@@ -39,7 +45,10 @@ public class ChatConfigService {
     }
 
     public BigInteger getTmpInUse(Long chatId) {
-        return chatConfigRepository.findById(chatId).get().getTmpInUse();
+        return chatConfigRepository.findById(chatId).get().getTmpInUseId();
     }
 
+    public TmpResultType getTmpInUseResultType(Long chatId) {
+        return chatConfigRepository.findById(chatId).get().getTmpInUseResultType();
+    }
 }

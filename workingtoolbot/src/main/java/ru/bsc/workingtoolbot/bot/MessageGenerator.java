@@ -1,4 +1,4 @@
-package ru.bsc.workingtoolbot;
+package ru.bsc.workingtoolbot.bot;
 
 import org.springframework.stereotype.Component;
 

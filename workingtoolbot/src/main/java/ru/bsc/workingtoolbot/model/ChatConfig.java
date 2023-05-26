@@ -3,7 +3,6 @@ package ru.bsc.workingtoolbot.model;
 
 import java.math.BigInteger;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.experimental.Accessors;
 import org.springframework.data.annotation.Id;
@@ -21,5 +20,8 @@ public class ChatConfig {
     @Field(targetType = FieldType.STRING)
     private BotState state;
 
-    private BigInteger tmpInUse;
+    private BigInteger tmpInUseId;
+
+    @Field(targetType = FieldType.STRING)
+    private TmpResultType tmpInUseResultType;
 }
