@@ -8,4 +8,6 @@ import ru.bsc.workingtoolbot.model.TestDataTemplate;
 
 public interface TestDataTemplateRepository extends MongoRepository<TestDataTemplate, BigInteger> {
     List<TestDataTemplate> findAllByChatId(Long chatId);
+
+    Boolean existsByChatIdAndName(Long chatId, String name);
 }
