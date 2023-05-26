@@ -23,6 +23,7 @@ import ru.bsc.workingtoolbot.model.BotState;
 import ru.bsc.workingtoolbot.model.TmpResultType;
 import ru.bsc.workingtoolbot.service.ChatConfigService;
 import ru.bsc.workingtoolbot.service.TestDataTemplateService;
+import ru.bsc.workingtoolbot.utils.exception.LogicException;
 import ru.bsc.workingtoolbot.utils.exception.ValidationException;
 
 
@@ -78,7 +79,6 @@ public class Bot extends TelegramLongPollingBot {
                 chatConfigService.setTmpInUseResultType(chatId, TmpResultType.MESSAGE);
             } else if(update.getCallbackQuery().getData().equals(CallbackType.TMP_FILE)) {
                 chatConfigService.setTmpInUseResultType(chatId, TmpResultType.FILE);
-
             } else {
                 return;
             }
@@ -143,7 +143,7 @@ public class Bot extends TelegramLongPollingBot {
             }
 
             case TMP_WAIT_NAME: {
-                chatConfigService.setTmpInUse(chatId, testDataTemplateService.setName(message));
+                chatConfigService.setTmpInUse(chatId, testDataTemplateService.setName(message, chatId));
                 sendMessage(chatId, "Введите список полей");
                 chatConfigService.setBotState(chatId, BotState.TMP_WAIT_LIST);
                 break;
@@ -152,11 +152,11 @@ public class Bot extends TelegramLongPollingBot {
             case TMP_WAIT_LIST: {
                 BigInteger tmpId = chatConfigService.getTmpInUse(chatId);
                 try {
-                    JsonNode jsonNode = parser.parse(message);
+                    JsonNode jsonNode = parser.parse(message, chatId);
+                    testDataTemplateService.addContent(tmpId, message, jsonNode.toString());
                     if(chatConfigService.getTmpInUseResultType(chatId).equals(TmpResultType.MESSAGE)) {
                         sendMessage(chatId, jsonNode.toPrettyString());
                     } else {
-                        testDataTemplateService.setPattern(message, tmpId);
                         File file = new File(String.format("%s.json", testDataTemplateService.getTemplate(tmpId).get().getName()));
                         objectMapper.writeValue(file, jsonNode);
                         SendDocument sendDocument = new SendDocument(chatId.toString(), new InputFile(file));
@@ -167,8 +167,9 @@ public class Bot extends TelegramLongPollingBot {
                     throw new RuntimeException(e);
                 } catch(ValidationException e) {
                     sendMessage(chatId, e.getMessage());
+                } catch(LogicException e) {
+                    sendMessage(chatId, e.getMessage());
                 }
-
             }
         }
     }
