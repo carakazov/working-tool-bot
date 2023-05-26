@@ -171,6 +171,7 @@ public class Bot extends TelegramLongPollingBot {
                         chatConfigService.setHelpQuestion(chatId, Boolean.TRUE);
                     } else {
                         sendMessage(chatId, "Все верно?"); //todo
+                        chatConfigService.setBotState(chatId, BotState.DEFAULT);
                     }
                 } else {
                     chatConfigService.setBotState(chatId, BotState.DEFAULT);
