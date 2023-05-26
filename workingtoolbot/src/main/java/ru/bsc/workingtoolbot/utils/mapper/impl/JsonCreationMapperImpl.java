@@ -6,6 +6,8 @@ import java.util.List;
 import org.springframework.stereotype.Component;
 import ru.bsc.workingtoolbot.dto.JsonCreationDto;
 import ru.bsc.workingtoolbot.dto.JsonStringRecord;
+import ru.bsc.workingtoolbot.utils.exception.LogicException;
+import ru.bsc.workingtoolbot.utils.exception.ValidationException;
 import ru.bsc.workingtoolbot.utils.mapper.JsonCreationMapper;
 
 @Component
@@ -20,11 +22,14 @@ public class JsonCreationMapperImpl implements JsonCreationMapper {
         List<JsonStringRecord> jsonStrings = new ArrayList<>();
         for(String line : request.split("\n")) {
             String[] params = line.split(" ");
+            if(params.length < 3) {
+                throw new LogicException("Некорректная строка - " + line);
+            }
             String title = params[FIELD_TITLE_INDEX];
             String required = params[FIELD_REQUIRED_MARK_INDEX];
             String dataType = params[FIELD_DATA_TYPE_INDEX];
             String regEx = params.length == 4 ? params[FIELD_REGEX_INDEX] : "";
-            jsonStrings.add(new JsonStringRecord(title, "M".equals(required), dataType, regEx));
+            jsonStrings.add(new JsonStringRecord(title, required, dataType, regEx));
         }
         return new JsonCreationDto(jsonStrings);
     }
