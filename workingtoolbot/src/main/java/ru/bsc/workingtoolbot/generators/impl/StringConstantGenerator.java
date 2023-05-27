@@ -28,8 +28,12 @@ public class StringConstantGenerator extends ConstantGenerator {
     }
 
     private String generateString(int length, ClassParameterDto classParameter, String className) {
-        String value = StringGenerator.generateString(8);
-        value = "\"" + value + "\"";
+        String value = StringGenerator.generateString(length);
+        if(classParameter.getName().equals("String")) {
+            value = "\"" + value + "\"";
+        } else {
+            value = "'" + value + "'";
+        }
         String title = className + classParameter.getName().substring(0, 1).toUpperCase(Locale.ROOT) + classParameter.getName().substring(1);
         String snakeTitle = toScreamingSnakeCase(title);
         return createConstantLine(classParameter.getType(), snakeTitle, value);

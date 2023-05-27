@@ -19,10 +19,8 @@ public class Controller {
     private final TestClassCreator testClassCreator;
     @GetMapping("/test")
     public TestClassesDto get() {
-        String address = "public class Address { \n private String address; \n }";
-        String role = "public class Role { \n private String title; \n }";
-        String user = "public class User { \n private String name; \n private List<Role> role; \n private Address address; \n}";;
-        List<ClassDto> classes = javaReader.readClasses(List.of(user, role, address));
+        String user = "public class User { \n private LocalTime name; \n}";
+        List<ClassDto> classes = javaReader.readClasses(List.of(user));
         TestClassesDto testClassesDto = testClassCreator.createClasses(classes);
         return testClassesDto;
     }
