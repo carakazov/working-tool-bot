@@ -25,6 +25,7 @@ import ru.bsc.workingtoolbot.model.BotState;
 import ru.bsc.workingtoolbot.model.TmpResultType;
 import ru.bsc.workingtoolbot.service.ChatConfigService;
 import ru.bsc.workingtoolbot.service.TestDataTemplateService;
+import ru.bsc.workingtoolbot.utils.exception.LogicException;
 import ru.bsc.workingtoolbot.utils.exception.ValidationException;
 
 
@@ -168,7 +169,7 @@ public class Bot extends TelegramLongPollingBot {
                     sendMessage(chatId, "Загрузите классы моделей и dto");
                     chatConfigService.setBotState(chatId, BotState.TC_WAIT_UPLOAD);
                 } else if(message.equals(MainCommand.TEST_DATA_LIST)) {
-                    
+
                 }
                 break;
             }
@@ -193,20 +194,26 @@ public class Bot extends TelegramLongPollingBot {
             }
 
             case TMP_WAIT_NAME: {
-                chatConfigService.setTmpInUse(chatId, testDataTemplateService.setName(message));
-                sendMessage(chatId, "Введите список полей");
-                chatConfigService.setBotState(chatId, BotState.TMP_WAIT_LIST);
-                break;
+
+                try {
+                    chatConfigService.setTmpInUse(chatId, testDataTemplateService.setName(message, chatId));
+                    sendMessage(chatId, "Введите список полей");
+                    chatConfigService.setBotState(chatId, BotState.TMP_WAIT_LIST);
+                    break;
+                } catch(ValidationException exception) {
+                    sendMessage(chatId, exception.getMessage());
+                    break;
+                }
             }
 
             case TMP_WAIT_LIST: {
                 BigInteger tmpId = chatConfigService.getTmpInUse(chatId);
                 try {
-                    JsonNode jsonNode = parser.parse(message);
+                    JsonNode jsonNode = parser.parse(message, chatId);
+                    testDataTemplateService.addContent(tmpId, message, jsonNode.toString());
                     if(chatConfigService.getTmpInUseResultType(chatId).equals(TmpResultType.MESSAGE)) {
                         sendMessage(chatId, jsonNode.toPrettyString());
                     } else {
-                        testDataTemplateService.setPattern(message, tmpId);
                         File fileTmp = new File(String.format(
                             "%s.json",
                             testDataTemplateService.getTemplate(tmpId).get().getName()
@@ -220,8 +227,9 @@ public class Bot extends TelegramLongPollingBot {
                     throw new RuntimeException(e);
                 } catch(ValidationException e) {
                     sendMessage(chatId, e.getMessage());
+                } catch(LogicException e) {
+                    sendMessage(chatId, e.getMessage());
                 }
-
             }
         }
     }

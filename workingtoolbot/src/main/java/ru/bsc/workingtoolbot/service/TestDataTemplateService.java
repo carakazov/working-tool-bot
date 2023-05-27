@@ -1,6 +1,7 @@
 package ru.bsc.workingtoolbot.service;
 
 import java.math.BigInteger;
+import java.util.List;
 import java.util.Optional;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -8,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import ru.bsc.workingtoolbot.model.TestDataTemplate;
 import ru.bsc.workingtoolbot.repository.TestDataTemplateRepository;
+import ru.bsc.workingtoolbot.utils.exception.LogicException;
+import ru.bsc.workingtoolbot.utils.exception.ValidationException;
 
 @Service
 @RequiredArgsConstructor
@@ -26,7 +29,22 @@ public class TestDataTemplateService {
         return "";
     }
 
-    public BigInteger setName(String name, BigInteger id) {
+    public List<TestDataTemplate> findAllByChatId(Long chatId) {
+        return repository.findAllByChatId(chatId);
+    }
+
+    public Boolean existsByChatIdAndName(Long chatId, String name) {
+        return repository.existsByChatIdAndName(chatId, name);
+    }
+
+    public void addContent(BigInteger id, String tmpTemplate, String tmpContent) {
+        TestDataTemplate testDataTemplate = getTemplate(id).orElseThrow(() -> new LogicException("Произошла ошибка на сервере"));
+        testDataTemplate.setTmpPattern(tmpTemplate);
+        testDataTemplate.setTmp(tmpContent);
+        repository.save(testDataTemplate);
+    }
+
+    public BigInteger setName(String name, BigInteger id, Long chatId) {
         TestDataTemplate testDataTemplate;
         if(id == null) {
             testDataTemplate = createTmp();
@@ -34,23 +52,16 @@ public class TestDataTemplateService {
             testDataTemplate = getTemplate(id).get();
         }
         testDataTemplate.setName(name);
+        testDataTemplate.setChatId(chatId);
         repository.save(testDataTemplate);
         return testDataTemplate.getId();
     }
 
-    public BigInteger setName(String name) {
-        return setName(name, null);
+    public BigInteger setName(String name, Long chatId) {
+        if(existsByChatIdAndName(chatId, name)) {
+            throw new ValidationException("У вас уже есть шаблон с таким именем. Придумайте другое.");
+        }
+        return setName(name, null, chatId);
     }
 
-    public void setPattern(String pattern, BigInteger id) {
-        TestDataTemplate testDataTemplate = getTemplate(id).get();
-        testDataTemplate.setTmpPattern(pattern);
-        repository.save(testDataTemplate);
-    }
-
-    public void setTmp(JsonNode tmp, BigInteger id) {
-        TestDataTemplate testDataTemplate = getTemplate(id).get();
-        testDataTemplate.setTmp(tmp);
-        repository.save(testDataTemplate);
-    }
 }

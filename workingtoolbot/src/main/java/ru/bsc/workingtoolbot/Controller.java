@@ -15,7 +15,7 @@ public class Controller {
     public JsonNode get() {
         String test = "testField M boolean\n" +
             "testFiel1 M decimal(2,3)";
-        JsonNode node = jsonParser.parse(test);
+        JsonNode node = jsonParser.parse(test, 1L);
         return node;
     }
 }
