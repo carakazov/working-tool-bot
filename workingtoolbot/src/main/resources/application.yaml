@@ -6,5 +6,3 @@ application:
   bot:
     username: BscWorkingToolBot
     token: 6236403942:AAEHWlA-9DNUygECvgBIgCyM1RekaXspw7Q
-server:
-  port: 8095
