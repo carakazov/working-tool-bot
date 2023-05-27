@@ -235,7 +235,7 @@ public class Bot extends TelegramLongPollingBot {
                     );
                     chatConfigService.setBotState(chatId, BotState.WAIT_FOR_USER_CHOICE);
                 } else if(message.equals(MainCommand.REMOVE)) {
-                    sendTmpListMessage(chatId, BotState.REMOVE_WAIT_FOR_CHOICE);
+                    //sendTmpListMessage(chatId, BotState.REMOVE_WAIT_FOR_CHOICE); //todo
                 }
                 break;
             }
