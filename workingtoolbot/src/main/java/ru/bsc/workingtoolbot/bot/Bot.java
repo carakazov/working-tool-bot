@@ -22,6 +22,7 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import ru.bsc.workingtoolbot.main.Parser;
 import ru.bsc.workingtoolbot.main.impl.JavaParser;
 import ru.bsc.workingtoolbot.model.BotState;
+import ru.bsc.workingtoolbot.model.TestDataTemplate;
 import ru.bsc.workingtoolbot.model.TmpResultType;
 import ru.bsc.workingtoolbot.service.ChatConfigService;
 import ru.bsc.workingtoolbot.service.TestDataTemplateService;
@@ -107,6 +108,13 @@ public class Bot extends TelegramLongPollingBot {
                     chatConfigService.setBotState(chatId, BotState.TMP_WAIT_NAME);
                     sendMessage(chatId, "Введите название для шаблона");
                     return;
+                } else if(callbackData.equals(CallbackType.TMP_LIST_FILE)) {
+                    chatConfigService.setTmpInUseResultType(chatId, TmpResultType.FILE);
+                    sendTmpListMessage(chatId);
+                } else if(callbackData.equals(CallbackType.TMP_LIST_MESSAGE)) {
+                    chatConfigService.setTmpInUseResultType(chatId, TmpResultType.MESSAGE);
+                    sendTmpListMessage(chatId);
+                    return;
                 }
             } catch(TelegramApiException e) {
                 throw new RuntimeException(e);
@@ -129,6 +137,17 @@ public class Bot extends TelegramLongPollingBot {
                 throw new RuntimeException(e);
             }
         }
+    }
+
+    private void sendTmpListMessage(Long chatId) throws TelegramApiException {
+        String tmp = testDataTemplateService.generateTestDataTemplatesMessage(chatId);
+        if(tmp.isEmpty()) {
+            sendMessage(chatId, "Сохраненных шаблонов нет");
+            return;
+        }
+        sendMessage(chatId, String.format("Выберите необходимый шаблон:%n%s", tmp));
+        chatConfigService.setBotState(chatId, BotState.TMP_LIST_WAIT_FOR_CHOOSING);
+        return;
     }
 
     private void sendMessage(Long chatId, String text) throws TelegramApiException {
@@ -163,13 +182,32 @@ public class Bot extends TelegramLongPollingBot {
                     sendMessage(
                         chatId,
                         "В каком виде хотите получить результат?",
-                        keyboardFactory.getChooseTestDataTypeKeyboard()
+                        keyboardFactory.getChooseTestDataTypeKeyboard(false)
                     );
                 } else if(message.equals(MainCommand.TEST_CLASSES_GENERATE)) {
                     sendMessage(chatId, "Загрузите классы моделей и dto");
                     chatConfigService.setBotState(chatId, BotState.TC_WAIT_UPLOAD);
                 } else if(message.equals(MainCommand.TEST_DATA_LIST)) {
+                    sendMessage(
+                        chatId,
+                        "В каком виде хотите получить результат?",
+                        keyboardFactory.getChooseTestDataTypeKeyboard(true)
+                    );
+                }
+                break;
+            }
 
+            case TMP_LIST_WAIT_FOR_CHOOSING: {
+                try {
+                    Integer orderingId = Integer.valueOf(message);
+                    TestDataTemplate template = testDataTemplateService.getTemplateByChatIdAndOrderingId(chatId, orderingId);
+                    JsonNode jsonNode = objectMapper.readTree(template.getTmp());
+                    generateJsonTmpMessage(chatId, jsonNode, template.getName());
+                } catch(IOException e) {
+                    sendMessage(chatId, "При обработке файла произошла ошибка");
+                    chatConfigService.setBotState(chatId, BotState.DEFAULT);
+                } catch(Exception e) {
+                    sendMessage(chatId, "Введите число из списка");
                 }
                 break;
             }
@@ -211,20 +249,10 @@ public class Bot extends TelegramLongPollingBot {
                 try {
                     JsonNode jsonNode = parser.parse(message, chatId);
                     testDataTemplateService.addContent(tmpId, message, jsonNode.toString());
-                    if(chatConfigService.getTmpInUseResultType(chatId).equals(TmpResultType.MESSAGE)) {
-                        sendMessage(chatId, jsonNode.toPrettyString());
-                    } else {
-                        File fileTmp = new File(String.format(
-                            "%s.json",
-                            testDataTemplateService.getTemplate(tmpId).get().getName()
-                        ));
-                        objectMapper.writeValue(fileTmp, jsonNode);
-                        SendDocument sendDocument = new SendDocument(chatId.toString(), new InputFile(fileTmp));
-                        execute(sendDocument);
-                    }
-                    chatConfigService.setBotState(chatId, BotState.DEFAULT);
+                    generateJsonTmpMessage(chatId, jsonNode, testDataTemplateService.getTemplate(tmpId).get().getName());
                 } catch(IOException e) {
-                    throw new RuntimeException(e);
+                    sendMessage(chatId, "При обработке файла произошла ошибка");
+                    chatConfigService.setBotState(chatId, BotState.DEFAULT);
                 } catch(ValidationException e) {
                     sendMessage(chatId, e.getMessage());
                 } catch(LogicException e) {
@@ -232,5 +260,22 @@ public class Bot extends TelegramLongPollingBot {
                 }
             }
         }
+    }
+
+    private void generateJsonTmpMessage(Long chatId, JsonNode jsonNode, String tmpName) throws
+        TelegramApiException,
+        IOException {
+        if(chatConfigService.getTmpInUseResultType(chatId).equals(TmpResultType.MESSAGE)) {
+            sendMessage(chatId, jsonNode.toPrettyString());
+        } else {
+            File fileTmp = new File(String.format(
+                "%s.json",
+                tmpName
+            ));
+            objectMapper.writeValue(fileTmp, jsonNode);
+            SendDocument sendDocument = new SendDocument(chatId.toString(), new InputFile(fileTmp));
+            execute(sendDocument);
+        }
+        chatConfigService.setBotState(chatId, BotState.DEFAULT);
     }
 }

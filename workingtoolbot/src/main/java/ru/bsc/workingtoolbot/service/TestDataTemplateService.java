@@ -3,6 +3,7 @@ package ru.bsc.workingtoolbot.service;
 import java.math.BigInteger;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
@@ -25,8 +26,16 @@ public class TestDataTemplateService {
         return repository.findById(id);
     }
 
-    public String generateTestDataTemplatesMessage() {
-        return "";
+    public String generateTestDataTemplatesMessage(Long chatId) {
+        List<TestDataTemplate> templates = repository.findAllByChatId(chatId);
+        StringBuilder sb = new StringBuilder();
+        AtomicInteger i = new AtomicInteger(1);
+        templates.forEach(t -> sb.append(i.getAndIncrement()).append(".  ").append(t.getName()).append("\n"));
+        return sb.toString();
+    }
+
+    public TestDataTemplate getTemplateByChatIdAndOrderingId(Long chatId, Integer orderingId) {
+        return repository.findAllByChatId(chatId).get(orderingId - 1);
     }
 
     public List<TestDataTemplate> findAllByChatId(Long chatId) {

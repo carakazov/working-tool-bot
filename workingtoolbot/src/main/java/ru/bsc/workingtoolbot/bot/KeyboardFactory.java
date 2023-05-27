@@ -14,15 +14,15 @@ public class KeyboardFactory {
     private final InlineKeyboardMarkup keyboard = new InlineKeyboardMarkup();
 
 
-    public InlineKeyboardMarkup getChooseTestDataTypeKeyboard() {
+    public InlineKeyboardMarkup getChooseTestDataTypeKeyboard(Boolean list) {
         List<InlineKeyboardButton> keyboardRow = new ArrayList<>();
         InlineKeyboardButton button1 = new InlineKeyboardButton();
         button1.setText("Сообщением");
-        button1.setCallbackData(CallbackType.TMP_MESSAGE);
+        button1.setCallbackData(list ? CallbackType.TMP_LIST_MESSAGE : CallbackType.TMP_MESSAGE);
 
         InlineKeyboardButton button2 = new InlineKeyboardButton();
         button2.setText("Файлом");
-        button2.setCallbackData(CallbackType.TMP_FILE);
+        button2.setCallbackData(list ? CallbackType.TMP_LIST_FILE : CallbackType.TMP_FILE);
 
         keyboardRow.add(button1);
         keyboardRow.add(button2);

@@ -11,5 +11,5 @@ public interface TestDataTemplateRepository extends MongoRepository<TestDataTemp
 
     Boolean existsByChatIdAndName(Long chatId, String name);
 
-    List<TestDataTemplate> findAllByOrderByName();
+    List<TestDataTemplate> findAllByChatIdOrderByName(Long chatId);
 }
