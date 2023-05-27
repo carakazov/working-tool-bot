@@ -2,6 +2,7 @@ package ru.bsc.workingtoolbot.bot;
 
 import java.io.*;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -285,12 +286,14 @@ public class Bot extends TelegramLongPollingBot {
                         TestClassesDto testClassesDto = testClassCreator.createClasses(classDtos);
                         try {
                             File constants = new File("TestDataConstants.java");
-                            objectMapper.writeValue(constants, testClassesDto.getTestDataConstants());
+                            FileOutputStream constantStream = new FileOutputStream(constants);
+                            constantStream.write(testClassesDto.getTestDataConstants().getBytes(StandardCharsets.UTF_8));
                             SendDocument sendConstants = new SendDocument(chatId.toString(), new InputFile(constants));
                             execute(sendConstants);
 
                             File functions = new File("FabricFunctionUtils.java");
-                            objectMapper.writeValue(constants, testClassesDto.getTestDataConstants());
+                            FileOutputStream functionsStream = new FileOutputStream(functions);
+                            functionsStream.write(testClassesDto.getFactoryMethodsClass().getBytes(StandardCharsets.UTF_8));
                             SendDocument sendFunctions = new SendDocument(chatId.toString(), new InputFile(functions));
                             execute(sendFunctions);
                         } catch(IOException exception) {

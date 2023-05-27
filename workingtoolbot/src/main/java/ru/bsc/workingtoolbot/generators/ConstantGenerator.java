@@ -22,6 +22,11 @@ public abstract class  ConstantGenerator {
             .replace(VALUE_PLACEHOLDER, value);
     }
 
+    protected String getTitle(String className, String parameterName) {
+        String title = className + parameterName.substring(0, 1).toUpperCase(Locale.ROOT) + parameterName.substring(1);
+        return toScreamingSnakeCase(title);
+    }
+
     protected String toScreamingSnakeCase(String string) {
         return string.replaceAll("([A-Z]+)([A-Z][a-z])", "$1_$2").replaceAll("([a-z])([A-Z])", "$1_$2").toUpperCase(
             Locale.ROOT);
