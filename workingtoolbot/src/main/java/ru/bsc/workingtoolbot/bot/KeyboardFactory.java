@@ -31,16 +31,26 @@ public class KeyboardFactory {
         return keyboard;
     }
 
-    public InlineKeyboardMarkup getChooseUploadFinished() {
+    public InlineKeyboardMarkup getYesNoKeyboard(YesNoDecisionType type) {
         List<InlineKeyboardButton> keyboardRow = new ArrayList<>();
         InlineKeyboardButton button1 = new InlineKeyboardButton();
         button1.setText("Да");
-        button1.setCallbackData(CallbackType.TC_UPLOAD_FINISHED);
-
         InlineKeyboardButton button2 = new InlineKeyboardButton();
         button2.setText("Нет");
-        button2.setCallbackData(CallbackType.TC_UPLOAD_NOT_FINISHED);
-
+        switch(type) {
+            case REMOVE -> {
+                button1.setCallbackData(CallbackType.REMOVE_SUBMIT);
+                button2.setCallbackData(CallbackType.REMOVE_NOT_SUBMIT);
+            }
+            case REMOVE_ALL -> {
+                button1.setCallbackData(CallbackType.REMOVE_ALL_SUBMIT);
+                button2.setCallbackData(CallbackType.REMOVE_ALL_NOT_SUBMIT);
+            }
+            case UPLOAD_FILE -> {
+                button1.setCallbackData(CallbackType.TC_UPLOAD_FINISHED);
+                button2.setCallbackData(CallbackType.TC_UPLOAD_NOT_FINISHED);
+            }
+        }
         keyboardRow.add(button1);
         keyboardRow.add(button2);
         keyboard.setKeyboard(Arrays.asList(keyboardRow));

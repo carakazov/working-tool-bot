@@ -26,6 +26,14 @@ public class TestDataTemplateService {
         return repository.findById(id);
     }
 
+    public void deleteAllByChatId(Long chatId) {
+        repository.deleteAllByChatId(chatId);
+    }
+
+    public void deleteById(BigInteger id) {
+        repository.deleteById(id);
+    }
+
     public String generateTestDataTemplatesMessage(Long chatId) {
         List<TestDataTemplate> templates = repository.findAllByChatId(chatId);
         StringBuilder sb = new StringBuilder();
@@ -35,7 +43,7 @@ public class TestDataTemplateService {
     }
 
     public TestDataTemplate getTemplateByChatIdAndOrderingId(Long chatId, Integer orderingId) {
-        return repository.findAllByChatId(chatId).get(orderingId - 1);
+        return repository.findAllByChatIdOrderByName(chatId).get(orderingId - 1);
     }
 
     public List<TestDataTemplate> findAllByChatId(Long chatId) {

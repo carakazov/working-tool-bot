@@ -68,7 +68,7 @@ public class Bot extends TelegramLongPollingBot {
         this.parser = parser;
         this.keyboardFactory = keyboardFactory;
         this.javaReader = javaReader;
-        this.testClassCreator =testClassCreator;
+        this.testClassCreator = testClassCreator;
     }
 
     @Override
@@ -121,10 +121,26 @@ public class Bot extends TelegramLongPollingBot {
                     return;
                 } else if(callbackData.equals(CallbackType.TMP_LIST_FILE)) {
                     chatConfigService.setTmpInUseResultType(chatId, TmpResultType.FILE);
-                    sendTmpListMessage(chatId);
+                    sendTmpListMessage(chatId, BotState.TMP_LIST_WAIT_FOR_CHOICE);
+                    return;
                 } else if(callbackData.equals(CallbackType.TMP_LIST_MESSAGE)) {
                     chatConfigService.setTmpInUseResultType(chatId, TmpResultType.MESSAGE);
-                    sendTmpListMessage(chatId);
+                    sendTmpListMessage(chatId, BotState.TMP_LIST_WAIT_FOR_CHOICE);
+                    return;
+                } else if(callbackData.equals(CallbackType.REMOVE_ALL_SUBMIT)) {
+                    testDataTemplateService.deleteAllByChatId(chatId);
+                    sendMessage(chatId, "Все шаблоны удалены");
+                    chatConfigService.setBotState(chatId, BotState.DEFAULT);
+                    return;
+                } else if(callbackData.equals(CallbackType.REMOVE_ALL_NOT_SUBMIT)) {
+                    rejectDelete(chatId);
+                    return;
+                } else if(callbackData.equals(CallbackType.REMOVE_SUBMIT)) {
+                    testDataTemplateService.deleteById(chatConfigService.getTmpInUse(chatId));
+                    sendMessage(chatId, "Шаблон успешно удален");
+                    chatConfigService.setBotState(chatId, BotState.DEFAULT);
+                } else if(callbackData.equals(CallbackType.REMOVE_NOT_SUBMIT)) {
+                    rejectDelete(chatId);
                     return;
                 }
             } catch(TelegramApiException e) {
@@ -150,15 +166,19 @@ public class Bot extends TelegramLongPollingBot {
         }
     }
 
-    private void sendTmpListMessage(Long chatId) throws TelegramApiException {
+    private void rejectDelete(Long chatId) throws TelegramApiException {
+        sendMessage(chatId, "Удаление отменено");
+        chatConfigService.setBotState(chatId, BotState.DEFAULT);
+    }
+
+    private void sendTmpListMessage(Long chatId, BotState botState) throws TelegramApiException {
         String tmp = testDataTemplateService.generateTestDataTemplatesMessage(chatId);
         if(tmp.isEmpty()) {
             sendMessage(chatId, "Сохраненных шаблонов нет");
             return;
         }
         sendMessage(chatId, String.format("Выберите необходимый шаблон:%n%s", tmp));
-        chatConfigService.setBotState(chatId, BotState.TMP_LIST_WAIT_FOR_CHOOSING);
-        return;
+        chatConfigService.setBotState(chatId, botState);
     }
 
     private void sendMessage(Long chatId, String text) throws TelegramApiException {
@@ -195,6 +215,7 @@ public class Bot extends TelegramLongPollingBot {
                         "В каком виде хотите получить результат?",
                         keyboardFactory.getChooseTestDataTypeKeyboard(false)
                     );
+                    chatConfigService.setBotState(chatId, BotState.WAIT_FOR_USER_CHOICE);
                 } else if(message.equals(MainCommand.TEST_CLASSES_GENERATE)) {
                     sendMessage(chatId, "Загрузите классы моделей и dto");
                     chatConfigService.setBotState(chatId, BotState.TC_WAIT_UPLOAD);
@@ -204,14 +225,36 @@ public class Bot extends TelegramLongPollingBot {
                         "В каком виде хотите получить результат?",
                         keyboardFactory.getChooseTestDataTypeKeyboard(true)
                     );
+                    chatConfigService.setBotState(chatId, BotState.WAIT_FOR_USER_CHOICE);
+                } else if(message.equals(MainCommand.REMOVE_ALL)) {
+                    sendMessage(
+                        chatId,
+                        "Вы уверены, что хотите очистить список шаблонов",
+                        keyboardFactory.getYesNoKeyboard(YesNoDecisionType.REMOVE_ALL)
+                    );
+                    chatConfigService.setBotState(chatId, BotState.WAIT_FOR_USER_CHOICE);
+                } else if(message.equals(MainCommand.REMOVE)) {
+                    sendTmpListMessage(chatId, BotState.REMOVE_WAIT_FOR_CHOICE);
                 }
                 break;
             }
 
-            case TMP_LIST_WAIT_FOR_CHOOSING: {
+            case REMOVE_WAIT_FOR_CHOICE: {
                 try {
                     Integer orderingId = Integer.valueOf(message);
-                    TestDataTemplate template = testDataTemplateService.getTemplateByChatIdAndOrderingId(chatId, orderingId);
+                    chatConfigService.setTmpInUse(chatId, testDataTemplateService.getTemplateByChatIdAndOrderingId(chatId, orderingId).getId());
+                    sendMessage(chatId, "Вы уверены, что хотите удалить этот шаблон?", keyboardFactory.getYesNoKeyboard(YesNoDecisionType.REMOVE));
+                } catch(Exception e) {
+                    sendMessage(chatId, "Введите число из списка");
+                }
+                break;
+            }
+
+            case TMP_LIST_WAIT_FOR_CHOICE: {
+                try {
+                    Integer orderingId = Integer.valueOf(message);
+                    TestDataTemplate template =
+                        testDataTemplateService.getTemplateByChatIdAndOrderingId(chatId, orderingId);
                     JsonNode jsonNode = objectMapper.readTree(template.getTmp());
                     generateJsonTmpMessage(chatId, jsonNode, template.getName());
                 } catch(IOException e) {
@@ -229,7 +272,11 @@ public class Bot extends TelegramLongPollingBot {
                     if(chatConfigService.getHelpMark(chatId) == null || Boolean.FALSE.equals(chatConfigService.getHelpMark(
                         chatId))) {
                         chatConfigService.setHelpMark(chatId, Boolean.TRUE);
-                        sendMessage(chatId, "Все классы загружены?", keyboardFactory.getChooseUploadFinished());
+                        sendMessage(
+                            chatId,
+                            "Все классы загружены?",
+                            keyboardFactory.getYesNoKeyboard(YesNoDecisionType.UPLOAD_FILE)
+                        );
                     }
                 } else {
                     if(callbackData.equals(CallbackType.TC_UPLOAD_FINISHED)) {
@@ -276,7 +323,11 @@ public class Bot extends TelegramLongPollingBot {
                 try {
                     JsonNode jsonNode = parser.parse(message, chatId);
                     testDataTemplateService.addContent(tmpId, message, jsonNode.toString());
-                    generateJsonTmpMessage(chatId, jsonNode, testDataTemplateService.getTemplate(tmpId).get().getName());
+                    generateJsonTmpMessage(
+                        chatId,
+                        jsonNode,
+                        testDataTemplateService.getTemplate(tmpId).get().getName()
+                    );
                 } catch(IOException e) {
                     sendMessage(chatId, "При обработке файла произошла ошибка");
                     chatConfigService.setBotState(chatId, BotState.DEFAULT);
