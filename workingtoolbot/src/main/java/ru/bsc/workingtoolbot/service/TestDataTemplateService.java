@@ -22,6 +22,10 @@ public class TestDataTemplateService {
         return repository.findById(id);
     }
 
+    public String generateTestDataTemplatesMessage() {
+        return "";
+    }
+
     public BigInteger setName(String name, BigInteger id) {
         TestDataTemplate testDataTemplate;
         if(id == null) {
