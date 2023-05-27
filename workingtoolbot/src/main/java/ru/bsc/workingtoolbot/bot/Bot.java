@@ -31,6 +31,7 @@ import ru.bsc.workingtoolbot.model.TestDataTemplate;
 import ru.bsc.workingtoolbot.model.TmpResultType;
 import ru.bsc.workingtoolbot.service.ChatConfigService;
 import ru.bsc.workingtoolbot.service.TestDataTemplateService;
+import ru.bsc.workingtoolbot.utils.exception.LogicException;
 import ru.bsc.workingtoolbot.utils.exception.ValidationException;
 
 

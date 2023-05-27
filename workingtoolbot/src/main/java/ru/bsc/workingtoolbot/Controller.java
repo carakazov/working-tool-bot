@@ -11,7 +11,6 @@ import ru.bsc.workingtoolbot.dto.ClassDto;
 import ru.bsc.workingtoolbot.dto.TestClassesDto;
 import ru.bsc.workingtoolbot.main.JavaReader;
 import ru.bsc.workingtoolbot.main.TestClassCreator;
-import ru.bsc.workingtoolbot.main.impl.JsonParser;
 
 @RestController
 @RequiredArgsConstructor
