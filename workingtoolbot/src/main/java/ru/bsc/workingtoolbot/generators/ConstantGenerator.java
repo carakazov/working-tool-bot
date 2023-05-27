@@ -6,7 +6,7 @@ import java.util.Locale;
 import ru.bsc.workingtoolbot.dto.ClassParameterDto;
 
 public abstract class  ConstantGenerator {
-    private static final String CONSTANT_TEMPLATE = "public static final {TYPE} {TITLE} = {VALUE}";
+    private static final String CONSTANT_TEMPLATE = "public static final {TYPE} {TITLE} = {VALUE};";
     private static final String TYPE_PLACEHOLDER = "{TYPE}";
     private static final String TITLE_PLACEHOLDER = "{TITLE}";
     private static final String VALUE_PLACEHOLDER = "{VALUE}";

@@ -2,6 +2,7 @@ package ru.bsc.workingtoolbot.bot;
 
 import java.io.*;
 import java.math.BigInteger;
+import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -19,7 +20,11 @@ import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboard;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+import ru.bsc.workingtoolbot.dto.ClassDto;
+import ru.bsc.workingtoolbot.dto.TestClassesDto;
+import ru.bsc.workingtoolbot.main.JavaReader;
 import ru.bsc.workingtoolbot.main.Parser;
+import ru.bsc.workingtoolbot.main.TestClassCreator;
 import ru.bsc.workingtoolbot.main.impl.JavaParser;
 import ru.bsc.workingtoolbot.model.BotState;
 import ru.bsc.workingtoolbot.model.TmpResultType;
@@ -39,6 +44,8 @@ public class Bot extends TelegramLongPollingBot {
     private final ObjectMapper objectMapper = new ObjectMapper()
         .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
         .setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL);
+    private final JavaReader javaReader;
+    private final TestClassCreator testClassCreator;
     @Value("${application.bot.username}")
     private String botUsername;
 
@@ -47,7 +54,9 @@ public class Bot extends TelegramLongPollingBot {
         @Value("${application.bot.token}") String botToken, JavaParser javaParser, ChatConfigService chatConfigService,
         TestDataTemplateService testDataTemplateService, MessageGenerator messageGenerator,
         Parser parser,
-        KeyboardFactory keyboardFactory
+        KeyboardFactory keyboardFactory,
+        JavaReader javaReader,
+        TestClassCreator testClassCreator
     ) {
         super(botToken);
         this.javaParser = javaParser;
@@ -56,6 +65,8 @@ public class Bot extends TelegramLongPollingBot {
         this.messageGenerator = messageGenerator;
         this.parser = parser;
         this.keyboardFactory = keyboardFactory;
+        this.javaReader = javaReader;
+        this.testClassCreator =testClassCreator;
     }
 
     @Override
@@ -170,7 +181,22 @@ public class Bot extends TelegramLongPollingBot {
                     if (chatConfigService.getHelpQuestion(chatId) == null || Boolean.FALSE.equals(chatConfigService.getHelpQuestion(chatId))) {
                         chatConfigService.setHelpQuestion(chatId, Boolean.TRUE);
                     } else {
-                        sendMessage(chatId, "Все верно?"); //todo
+                        List<String> files = chatConfigService.getFilesInUse(chatId);
+                        List<ClassDto> classDtos = javaReader.readClasses(files);
+                        TestClassesDto testClassesDto = testClassCreator.createClasses(classDtos);
+                        try {
+                            File constants = new File("TestDataConstants.java");
+                            objectMapper.writeValue(constants, testClassesDto.getTestDataConstants());
+                            SendDocument sendConstants = new SendDocument(chatId.toString(), new InputFile(constants));
+                            execute(sendConstants);
+
+                            File functions = new File("FabricFunctionUtils.java");
+                            objectMapper.writeValue(constants, testClassesDto.getTestDataConstants());
+                            SendDocument sendFunctions = new SendDocument(chatId.toString(), new InputFile(functions));
+                            execute(sendFunctions);
+                        } catch(IOException exception) {
+                            throw new RuntimeException(exception);
+                        }
                         chatConfigService.setBotState(chatId, BotState.DEFAULT);
                     }
                 } else {

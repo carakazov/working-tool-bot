@@ -25,6 +25,11 @@ public class ChatConfigService {
         chatConfigRepository.save(new ChatConfig().setChatId(chatId).setState(BotState.DEFAULT));
     }
 
+    public List<String> getFilesInUse(Long chatId) {
+        ChatConfig filesInUse = chatConfigRepository.findById(chatId).get();
+        return filesInUse.getFilesInUse();
+    }
+
     public void setBotState(Long chatId, BotState botState) {
         ChatConfig chatConfig = chatConfigRepository.findById(chatId).get();
         chatConfig.setState(botState);
