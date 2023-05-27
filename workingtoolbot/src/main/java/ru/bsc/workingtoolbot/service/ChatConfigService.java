@@ -53,13 +53,13 @@ public class ChatConfigService {
         chatConfigRepository.save(chatConfig);
     }
 
-    public void setHelpQuestion(Long chatId, Boolean helpMark) {
+    public void setHelpMark(Long chatId, Boolean helpMark) {
         ChatConfig chatConfig = chatConfigRepository.findById(chatId).get();
         chatConfig.setHelpMark(helpMark);
         chatConfigRepository.save(chatConfig);
     }
 
-    public Boolean getHelpQuestion(Long chatId) {
+    public Boolean getHelpMark(Long chatId) {
         return chatConfigRepository.findById(chatId).get().getHelpMark();
     }
 

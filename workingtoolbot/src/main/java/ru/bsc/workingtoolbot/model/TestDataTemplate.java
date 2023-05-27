@@ -18,5 +18,7 @@ public class TestDataTemplate {
 
     private String tmpPattern;
 
-    private JsonNode tmp;
+    private String tmp;
+
+    private Long chatId;
 }

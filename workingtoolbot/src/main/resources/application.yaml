@@ -4,5 +4,7 @@ spring:
       uri: mongodb://127.0.0.1/working_tool_bot
 application:
   bot:
-    username: WorkingToolBot
-    token: 6220159674:AAFku56ciYsE-_mz_W7JFpQVqCdlOEWNIyo
+    username: BscWorkingToolBot
+    token: 6236403942:AAEHWlA-9DNUygECvgBIgCyM1RekaXspw7Q
+server:
+  port: 8095

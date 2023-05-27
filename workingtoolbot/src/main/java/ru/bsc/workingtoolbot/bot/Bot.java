@@ -27,6 +27,7 @@ import ru.bsc.workingtoolbot.main.Parser;
 import ru.bsc.workingtoolbot.main.TestClassCreator;
 import ru.bsc.workingtoolbot.main.impl.JavaParser;
 import ru.bsc.workingtoolbot.model.BotState;
+import ru.bsc.workingtoolbot.model.TestDataTemplate;
 import ru.bsc.workingtoolbot.model.TmpResultType;
 import ru.bsc.workingtoolbot.service.ChatConfigService;
 import ru.bsc.workingtoolbot.service.TestDataTemplateService;
@@ -81,9 +82,10 @@ public class Bot extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
-        String messageText;
+        String messageText = "";
         Long chatId;
         File file = null;
+        String callbackData = "";
 
         if(update.hasMessage()) {
             chatId = update.getMessage().getChatId();
@@ -104,21 +106,29 @@ public class Bot extends TelegramLongPollingBot {
             }
         } else if(update.hasCallbackQuery()) {
             chatId = update.getCallbackQuery().getMessage().getChatId();
-            if(update.getCallbackQuery().getData().equals(CallbackType.TMP_MESSAGE)) {
-                chatConfigService.setTmpInUseResultType(chatId, TmpResultType.MESSAGE);
-            } else if(update.getCallbackQuery().getData().equals(CallbackType.TMP_FILE)) {
-                chatConfigService.setTmpInUseResultType(chatId, TmpResultType.FILE);
-
-            } else {
-                return;
-            }
-            chatConfigService.setBotState(chatId, BotState.TMP_WAIT_NAME);
+            callbackData = update.getCallbackQuery().getData();
             try {
-                sendMessage(chatId, "Введите название для шаблона");
+                if(callbackData.equals(CallbackType.TMP_MESSAGE)) {
+                    chatConfigService.setTmpInUseResultType(chatId, TmpResultType.MESSAGE);
+                    chatConfigService.setBotState(chatId, BotState.TMP_WAIT_NAME);
+                    sendMessage(chatId, "Введите название для шаблона");
+                    return;
+                } else if(callbackData.equals(CallbackType.TMP_FILE)) {
+                    chatConfigService.setTmpInUseResultType(chatId, TmpResultType.FILE);
+                    chatConfigService.setBotState(chatId, BotState.TMP_WAIT_NAME);
+                    sendMessage(chatId, "Введите название для шаблона");
+                    return;
+                } else if(callbackData.equals(CallbackType.TMP_LIST_FILE)) {
+                    chatConfigService.setTmpInUseResultType(chatId, TmpResultType.FILE);
+                    sendTmpListMessage(chatId);
+                } else if(callbackData.equals(CallbackType.TMP_LIST_MESSAGE)) {
+                    chatConfigService.setTmpInUseResultType(chatId, TmpResultType.MESSAGE);
+                    sendTmpListMessage(chatId);
+                    return;
+                }
             } catch(TelegramApiException e) {
                 throw new RuntimeException(e);
             }
-            return;
         } else {
             return;
         }
@@ -132,11 +142,22 @@ public class Bot extends TelegramLongPollingBot {
             }
         } else {
             try {
-                handleBotState(messageText, chatId, file);
+                handleBotState(messageText, chatId, file, callbackData);
             } catch(TelegramApiException e) {
                 throw new RuntimeException(e);
             }
         }
+    }
+
+    private void sendTmpListMessage(Long chatId) throws TelegramApiException {
+        String tmp = testDataTemplateService.generateTestDataTemplatesMessage(chatId);
+        if(tmp.isEmpty()) {
+            sendMessage(chatId, "Сохраненных шаблонов нет");
+            return;
+        }
+        sendMessage(chatId, String.format("Выберите необходимый шаблон:%n%s", tmp));
+        chatConfigService.setBotState(chatId, BotState.TMP_LIST_WAIT_FOR_CHOOSING);
+        return;
     }
 
     private void sendMessage(Long chatId, String text) throws TelegramApiException {
@@ -150,7 +171,8 @@ public class Bot extends TelegramLongPollingBot {
         execute(sendMessage);
     }
 
-    private void handleBotState(String message, Long chatId, File file) throws TelegramApiException {
+    private void handleBotState(String message, Long chatId, File file, String callbackData) throws
+        TelegramApiException {
         BotState state = chatConfigService.getBotState(chatId);
         if(message.equals(MainCommand.CANCEL)) {
             if(state == BotState.DEFAULT) {
@@ -167,10 +189,35 @@ public class Bot extends TelegramLongPollingBot {
                 if(message.equals(MainCommand.HELP)) {
                     sendMessage(chatId, messageGenerator.generateHelpMessage());
                 } else if(message.equals(MainCommand.TEST_DATA_CREATE)) {
-                    sendMessage(chatId, "В каком виде хотите получить результат?", keyboardFactory.getChooseTesDataTypeKeyboard());
+                    sendMessage(
+                        chatId,
+                        "В каком виде хотите получить результат?",
+                        keyboardFactory.getChooseTestDataTypeKeyboard(false)
+                    );
                 } else if(message.equals(MainCommand.TEST_CLASSES_GENERATE)) {
                     sendMessage(chatId, "Загрузите классы моделей и dto");
                     chatConfigService.setBotState(chatId, BotState.TC_WAIT_UPLOAD);
+                } else if(message.equals(MainCommand.TEST_DATA_LIST)) {
+                    sendMessage(
+                        chatId,
+                        "В каком виде хотите получить результат?",
+                        keyboardFactory.getChooseTestDataTypeKeyboard(true)
+                    );
+                }
+                break;
+            }
+
+            case TMP_LIST_WAIT_FOR_CHOOSING: {
+                try {
+                    Integer orderingId = Integer.valueOf(message);
+                    TestDataTemplate template = testDataTemplateService.getTemplateByChatIdAndOrderingId(chatId, orderingId);
+                    JsonNode jsonNode = objectMapper.readTree(template.getTmp());
+                    generateJsonTmpMessage(chatId, jsonNode, template.getName());
+                } catch(IOException e) {
+                    sendMessage(chatId, "При обработке файла произошла ошибка");
+                    chatConfigService.setBotState(chatId, BotState.DEFAULT);
+                } catch(Exception e) {
+                    sendMessage(chatId, "Введите число из списка");
                 }
                 break;
             }
@@ -178,9 +225,13 @@ public class Bot extends TelegramLongPollingBot {
             case TC_WAIT_UPLOAD: {
                 if(file != null) {
                     chatConfigService.addFileContent(chatId, javaParser.getContent(file));
-                    if (chatConfigService.getHelpQuestion(chatId) == null || Boolean.FALSE.equals(chatConfigService.getHelpQuestion(chatId))) {
-                        chatConfigService.setHelpQuestion(chatId, Boolean.TRUE);
-                    } else {
+                    if(chatConfigService.getHelpMark(chatId) == null || Boolean.FALSE.equals(chatConfigService.getHelpMark(
+                        chatId))) {
+                        chatConfigService.setHelpMark(chatId, Boolean.TRUE);
+                        sendMessage(chatId, "Все классы загружены?", keyboardFactory.getChooseUploadFinished());
+                    }
+                } else {
+                    if(callbackData.equals(CallbackType.TC_UPLOAD_FINISHED)) {
                         List<String> files = chatConfigService.getFilesInUse(chatId);
                         List<ClassDto> classDtos = javaReader.readClasses(files);
                         TestClassesDto testClassesDto = testClassCreator.createClasses(classDtos);
@@ -198,41 +249,59 @@ public class Bot extends TelegramLongPollingBot {
                             throw new RuntimeException(exception);
                         }
                         chatConfigService.setBotState(chatId, BotState.DEFAULT);
+                    } else if(callbackData.equals(CallbackType.TC_UPLOAD_NOT_FINISHED)) {
+                        sendMessage(chatId, "Загрузите классы моделей и dto");
+                        chatConfigService.setHelpMark(chatId, false);
                     }
-                } else {
-                    chatConfigService.setBotState(chatId, BotState.DEFAULT);
                 }
                 break;
             }
 
             case TMP_WAIT_NAME: {
-                chatConfigService.setTmpInUse(chatId, testDataTemplateService.setName(message));
-                sendMessage(chatId, "Введите список полей");
-                chatConfigService.setBotState(chatId, BotState.TMP_WAIT_LIST);
-                break;
+
+                try {
+                    chatConfigService.setTmpInUse(chatId, testDataTemplateService.setName(message, chatId));
+                    sendMessage(chatId, "Введите список полей");
+                    chatConfigService.setBotState(chatId, BotState.TMP_WAIT_LIST);
+                    break;
+                } catch(ValidationException exception) {
+                    sendMessage(chatId, exception.getMessage());
+                    break;
+                }
             }
 
             case TMP_WAIT_LIST: {
                 BigInteger tmpId = chatConfigService.getTmpInUse(chatId);
                 try {
-                    JsonNode jsonNode = parser.parse(message);
-                    if(chatConfigService.getTmpInUseResultType(chatId).equals(TmpResultType.MESSAGE)) {
-                        sendMessage(chatId, jsonNode.toPrettyString());
-                    } else {
-                        testDataTemplateService.setPattern(message, tmpId);
-                        File fileTmp = new File(String.format("%s.json", testDataTemplateService.getTemplate(tmpId).get().getName()));
-                        objectMapper.writeValue(file, jsonNode);
-                        SendDocument sendDocument = new SendDocument(chatId.toString(), new InputFile(file));
-                        execute(sendDocument);
-                    }
-                    chatConfigService.setBotState(chatId, BotState.DEFAULT);
+                    JsonNode jsonNode = parser.parse(message, chatId);
+                    testDataTemplateService.addContent(tmpId, message, jsonNode.toString());
+                    generateJsonTmpMessage(chatId, jsonNode, testDataTemplateService.getTemplate(tmpId).get().getName());
                 } catch(IOException e) {
-                    throw new RuntimeException(e);
+                    sendMessage(chatId, "При обработке файла произошла ошибка");
+                    chatConfigService.setBotState(chatId, BotState.DEFAULT);
                 } catch(ValidationException e) {
                     sendMessage(chatId, e.getMessage());
+                } catch(LogicException e) {
+                    sendMessage(chatId, e.getMessage());
                 }
-
             }
         }
+    }
+
+    private void generateJsonTmpMessage(Long chatId, JsonNode jsonNode, String tmpName) throws
+        TelegramApiException,
+        IOException {
+        if(chatConfigService.getTmpInUseResultType(chatId).equals(TmpResultType.MESSAGE)) {
+            sendMessage(chatId, jsonNode.toPrettyString());
+        } else {
+            File fileTmp = new File(String.format(
+                "%s.json",
+                tmpName
+            ));
+            objectMapper.writeValue(fileTmp, jsonNode);
+            SendDocument sendDocument = new SendDocument(chatId.toString(), new InputFile(fileTmp));
+            execute(sendDocument);
+        }
+        chatConfigService.setBotState(chatId, BotState.DEFAULT);
     }
 }
